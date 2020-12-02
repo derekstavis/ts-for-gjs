@@ -35,6 +35,8 @@ import {
  */
 export const STATIC_NAME_ALREADY_EXISTS = ['GMime.Charset', 'Camel.StoreInfo']
 
+export const SIGNAL_METHOD_NAMES = ['connect', 'connect_after', 'emit', 'disconnect']
+
 export const MAXIMUM_RECUSION_DEPTH = 100
 
 export class GirModule {
@@ -1298,10 +1300,11 @@ export class GirModule {
 
         // Some interfaces have method names that clash with each other, we may have inherited two
         for (const [fName, defns] of fnMap) {
+            const sigClash = SIGNAL_METHOD_NAMES.includes(fName) && girClass._fullSymName != 'GObject.Object'
             // Have to add all inherited names to localNames to prevent clashes with properties,
             // regardless of whether they're overloaded here
             localNames[fName] = true
-            if (defns.size < 2) {
+            if (defns.size < 2 && !sigClash) {
                 continue
             }
             // Here key is name-stripped defn, val is full defn and class name
@@ -1311,12 +1314,12 @@ export class GirModule {
                     subDefs.set(this.stripParamNames(d), [d, clsName])
                 }
             }
-            if (subDefs.size < 2) {
+            if (subDefs.size < 2 && !sigClash) {
                 continue
             }
 
             for (const [d, [defn, clsName]] of subDefs) {
-                if (d.indexOf('vfunc_') >= 0) {
+                if (vfunc) {
                     defs.push(`    /* Clashing method inherited from ${clsName}, do not override */`)
                 } else {
                     defs.push(`    /* False overload, use ${clsName}.prototype.${fName}.call() */`)
