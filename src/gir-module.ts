@@ -298,8 +298,7 @@ export class GirModule {
 
         if (girVar.callback?.length) {
             fullTypeName = this.getFunction(girVar.callback[0], '', '', undefined, true)[0][0]
-            if (suffix.length)
-                fullTypeName = '(' + fullTypeName + ')'
+            if (suffix.length) fullTypeName = '(' + fullTypeName + ')'
         } else {
             if (!type?.$) return 'any'
 
@@ -447,13 +446,12 @@ export class GirModule {
         if (parameters && parameters.length > 0) {
             const parametersArray = parameters[0].parameter || []
             // Instance parameter needs to be exposed for class methods (see comment above getClassMethods())
-            const instanceParameter = parameters[0]["instance-parameter"]
-            if (instanceParameter && instanceParameter[0])
-            {
+            const instanceParameter = parameters[0]['instance-parameter']
+            if (instanceParameter && instanceParameter[0]) {
                 const typeName = instanceParameter[0].type ? instanceParameter[0].type[0].$.name : undefined
                 const rec = typeName ? this.ns.record?.find((r) => r.$.name == typeName) : undefined
                 const structFor = rec?.$['glib:is-gtype-struct-for']
-                const gobject = (this.name === "GObject" || this.name === "GLib") ? '' : 'GObject.'
+                const gobject = this.name === 'GObject' || this.name === 'GLib' ? '' : 'GObject.'
                 if (structFor) {
                     // TODO: Should use of a constructor, and even of an instance, be discouraged?
                     def.push(`${instanceParameter[0].$.name}: ${structFor} | Function | ${gobject}Type`)
@@ -1326,9 +1324,10 @@ export class GirModule {
         if (isAbstract) {
             def.push(`export abstract class ${name} {`)
         } else if (asInterface) {
-            let inherits: string[] = girClass.prerequisite?.length ?
-                girClass.prerequisite.filter(p => p.$.name != undefined).map(p => p.$.name || "") : []
-            inherits = inherits.map(name => {
+            let inherits: string[] = girClass.prerequisite?.length
+                ? girClass.prerequisite.filter((p) => p.$.name != undefined).map((p) => p.$.name || '')
+                : []
+            inherits = inherits.map((name) => {
                 if (name.indexOf('.') > 0) {
                     const [mod, leaf] = name.split('.')
                     if (mod == this.name) {
@@ -1340,7 +1339,7 @@ export class GirModule {
             if (localParentName) {
                 inherits.unshift(localParentName)
             }
-            const ext = inherits.length ? ` extends ${inherits.join(',')}` : ""
+            const ext = inherits.length ? ` extends ${inherits.join(',')}` : ''
             def.push(`export interface ${name}${ext} {`)
         } else {
             def.push(`export class ${name} {`)
@@ -1367,7 +1366,9 @@ export class GirModule {
                 def.push(...this.processProperties(cls, localNames, propertyNames)),
             )
             // Copy properties from implemented interface
-            this.forEachInterface(girClass, (cls) => def.push(...this.processProperties(cls, localNames, propertyNames)))
+            this.forEachInterface(girClass, (cls) =>
+                def.push(...this.processProperties(cls, localNames, propertyNames)),
+            )
             // Copy fields from inheritance tree
             this.traverseInheritanceTree(girClass, (cls) => def.push(...this.processFields(cls, localNames)))
             // Copy methods from inheritance tree
