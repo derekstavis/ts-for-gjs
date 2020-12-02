@@ -1214,6 +1214,25 @@ export class GirModule {
         return []
     }
 
+    // Both names should be qualified with module name
+    private classIsDerivedFrom(cls1: string, cls2: string): boolean {
+        const girClass = this.symTable[cls1] as GirClass
+        let match = false
+        this.traverseInheritanceTree(girClass, (cls) => {
+            if (match) return
+            this.forEachInterfaceAndSelf(cls, (e) => {
+                if (!match && e._fullSymName == cls2)
+                    match = true
+            })
+        })
+        return match
+    }
+
+    // Both names should be qualified with module name
+    private classesShareInheritanceTree(cls1: string, cls2: string): boolean {
+        return this.classIsDerivedFrom(cls1, cls2) || this.classIsDerivedFrom(cls2, cls1)
+    }
+
     public processMethodsWithOverloads(
         girClass: GirClass,
         localNames: LocalNames,
@@ -1258,6 +1277,7 @@ export class GirModule {
                 defs.push(`    // Skipping ${meth[1]} because it clashes with an inherited property`)
                 continue
             }
+            defs.push(...meth[0])
             const clashes = fnMap.get(meth[1])
             if (!clashes) continue
             for (const [cls, defns] of clashes) {
@@ -1272,7 +1292,9 @@ export class GirModule {
 
         // Some interfaces have method names that clash with each other, we may have inherited two
         for (const [fName, defns] of fnMap) {
-            if (defns.size < 2) continue
+            if (defns.size < 2) {
+                continue
+            }
             // Here key is name-stripped defn, val is full defn and class name
             const subDefs: Map<string, [string, string]> = new Map()
             for (const [clsName, defs] of defns) {
@@ -1280,7 +1302,10 @@ export class GirModule {
                     subDefs.set(this.stripParamNames(d), [d, clsName])
                 }
             }
-            if (subDefs.size < 2) continue
+            if (subDefs.size < 2) {
+                continue
+            }
+
             for (const [d, [defn, clsName]] of subDefs) {
                 if (d.indexOf('vfunc_') >= 0) {
                     defs.push(`    // Clashing method inherited from ${clsName}, do not override`)
