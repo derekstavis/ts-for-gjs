@@ -1129,7 +1129,7 @@ export class GirModule {
 
         def.push(...this.getAllStaticFunctions(girClass, name, stat))
 
-        if (isDerivedFromGObject) {
+        if (isDerivedFromGObject || this.isGInterface(girClass)) {
             def.push(`    ${stat}$gtype: ${this.packageName === 'GObject-2.0' ? '' : 'GObject.'}Type`)
         }
 
