@@ -1,4 +1,7 @@
+const testConfig = require('./.ts-for-gir.test.rc.js')
+
 module.exports = {
+    ...testConfig,
     "ignore": [
         "CoglPango-2.0",
         "Cogl-2.0",

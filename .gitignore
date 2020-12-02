@@ -1,8 +1,6 @@
 *.lock
 *-lock*
 main.js
-test.js
-testData.js
 node_modules/
 tmp/
 lib/
