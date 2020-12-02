@@ -1111,12 +1111,12 @@ export class GirModule {
         def.push(...this.getAllStaticFunctions(girClass, name, stat))
 
         if (isDerivedFromGObject) {
-            def.push(`    ${stat} $gtype: ${this.packageName === 'GObject-2.0' ? '' : 'GObject.'}Type`)
+            def.push(`    ${stat}$gtype: ${this.packageName === 'GObject-2.0' ? '' : 'GObject.'}Type`)
         }
 
         if (girClass._fullSymName && !STATIC_NAME_ALREADY_EXISTS.includes(girClass._fullSymName)) {
             // Records, classes and interfaces all have a static name
-            def.push(`    ${stat} name: string`)
+            def.push(`    ${stat}name: string`)
         }
 
         return def
