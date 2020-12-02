@@ -821,8 +821,7 @@ export class GirModule {
         for (const func of cls[methodType] || []) {
             const [desc, name] = this.getFunction(func, '    ', prefix)
             const checked = this.checkName(desc, name, localNames)
-            if (checked)
-                def.push([checked[0], name, cls._fullSymName || null])
+            if (checked) def.push([checked[0], name, cls._fullSymName || null])
         }
         return def
     }
@@ -961,10 +960,7 @@ export class GirModule {
         return methods.map((m) => this.getFunction(m, `    ${stat}`))
     }
 
-    private getOtherStaticFunctions(
-        girClass: GirClass,
-        stat: 'static ' | '',
-    ): FunctionDescription[] {
+    private getOtherStaticFunctions(girClass: GirClass, stat: 'static ' | ''): FunctionDescription[] {
         const fns: FunctionDescription[] = []
         if (girClass.function) {
             for (const func of girClass.function) {
@@ -1026,11 +1022,9 @@ export class GirModule {
         if (!Array.isArray(f2)) {
             f2 = [f2]
         }
-        if (f1.length != f2.length)
-            return false
+        if (f1.length != f2.length) return false
         for (let i = 0; i < f1.length; ++i) {
-            if (this.stripParamNames(f1[i]) != this.stripParamNames(f2[i]))
-                return false
+            if (this.stripParamNames(f1[i]) != this.stripParamNames(f2[i])) return false
         }
         return true
     }
@@ -1070,11 +1064,7 @@ export class GirModule {
      * @param girClass
      * @param name
      */
-    private getAllStaticFunctions(
-        girClass: GirClass,
-        name: string,
-        stat: 'static ' | '',
-    ) {
+    private getAllStaticFunctions(girClass: GirClass, name: string, stat: 'static ' | '') {
         const stc: string[] = []
 
         stc.push(
@@ -1111,8 +1101,8 @@ export class GirModule {
                 def.push(`    new (config?: ${name}_ConstructProps): ${name}`)
             } else {
                 def.push(`    constructor (config?: ${name}_ConstructProps)`)
+                def.push(`    _init (config?: ${name}_ConstructProps): void`)
             }
-            def.push(`    _init (config?: ${name}_ConstructProps): void`)
         } else {
             const constructor_: GirFunction[] = (girClass['constructor'] || []) as GirFunction[]
             if (constructor_) {
@@ -1227,8 +1217,7 @@ export class GirModule {
         this.traverseInheritanceTree(girClass, (cls) => {
             if (match) return
             this.forEachInterfaceAndSelf(cls, (e) => {
-                if (!match && e._fullSymName == cls2)
-                    match = true
+                if (!match && e._fullSymName == cls2) match = true
             })
         })
         return match
@@ -1328,8 +1317,7 @@ export class GirModule {
             }
         }
 
-        if (defs.length)
-            defs.unshift(`    /* ${vfunc ? 'Virtual' : 'Instance'} methods */`)
+        if (defs.length) defs.unshift(`    /* ${vfunc ? 'Virtual' : 'Instance'} methods */`)
         return defs
     }
 
@@ -1366,10 +1354,9 @@ export class GirModule {
             def.push(`export abstract class ${name} {`)
         } else if (asInterface) {
             let prereq = girClass.implements || []
-            if (girClass.prerequisite?.length)
-                prereq = prereq.concat(girClass.prerequisite)
-            let inherits = prereq.filter(p => p.$.name != undefined).map(p => p.$.name || '')
-            inherits = inherits.map(name => {
+            if (girClass.prerequisite?.length) prereq = prereq.concat(girClass.prerequisite)
+            let inherits = prereq.filter((p) => p.$.name != undefined).map((p) => p.$.name || '')
+            inherits = inherits.map((name) => {
                 if (name.indexOf('.') > 0) {
                     const [mod, leaf] = name.split('.')
                     if (mod == this.name) {
@@ -1395,17 +1382,36 @@ export class GirModule {
 
         if (asInterface) {
             // Instance methods
-            def.push(...this.processMethodsWithOverloads(girClass, localNames, (cls, locs) => {
-                return this.processNamedMethods(cls, locs, 'method')
-            }, false))
+            def.push(
+                ...this.processMethodsWithOverloads(
+                    girClass,
+                    localNames,
+                    (cls, locs) => {
+                        return this.processNamedMethods(cls, locs, 'method')
+                    },
+                    false,
+                ),
+            )
             // Properties
             def.push(...this.processProperties(girClass, localNames, propertyNames))
             // Virtual methods
-            def.push(...this.processMethodsWithOverloads(girClass, {}, (cls, locs) => {
-                return this.processNamedMethods(cls, locs, 'virtual-method', 'vfunc_')
-            }, true))
+            def.push(
+                ...this.processMethodsWithOverloads(
+                    girClass,
+                    {},
+                    (cls, locs) => {
+                        return this.processNamedMethods(cls, locs, 'virtual-method', 'vfunc_')
+                    },
+                    true,
+                ),
+            )
             // Signals
             def.push(...this.processSignals(girClass, name))
+
+            if (this.isDerivedFromGObject(girClass)) {
+                def.push('    /* GObject initialiser */')
+                def.push(`    _init (config?: ${name}_ConstructProps): void`)
+            }
         } else {
             // Copy properties from inheritance tree
             this.traverseInheritanceTree(girClass, (cls) =>
