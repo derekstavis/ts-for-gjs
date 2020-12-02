@@ -1236,7 +1236,8 @@ export class GirModule {
     public processMethodsWithOverloads(
         girClass: GirClass,
         localNames: LocalNames,
-        getter: (cls: GirClass, localNames: LocalNames) => ScopedFunctionDescription[]
+        getter: (cls: GirClass, localNames: LocalNames) => ScopedFunctionDescription[],
+        vfunc: boolean,
     ): string[] {
         const defs: string[] = []
 
@@ -1317,7 +1318,7 @@ export class GirModule {
         }
 
         if (defs.length)
-            defs.unshift('    /* Instance methods */')
+            defs.unshift(`    /* ${vfunc ? 'Virtual' : 'Instance'} methods */`)
         return defs
     }
 
@@ -1385,19 +1386,20 @@ export class GirModule {
             // Instance methods
             def.push(...this.processMethodsWithOverloads(girClass, localNames, (cls, locs) => {
                 return this.processNamedMethods(cls, locs, 'method')
-            }))
+            }, false))
             // Properties
             def.push(...this.processProperties(girClass, localNames, propertyNames))
             // Virtual methods
             def.push(...this.processMethodsWithOverloads(girClass, {}, (cls, locs) => {
                 return this.processNamedMethods(cls, locs, 'virtual-method', 'vfunc_')
-            }))
+            }, true))
             // Signals
             def.push(...this.processSignals(girClass, name))
 
             // Also add generic signal methods to satisfy TS overloading
             if (girClass._fullSymName != 'GObject.Object') {
-                def.push('    connect(sigName: string, callback: any): number',
+                def.push('    /* Generic signal methods */',
+                    '    connect(sigName: string, callback: any): number',
                     '    connect_after(sigName: string, callback: any): number',
                     '    emit(sigName: string, ...args: any[]): void')
             }
