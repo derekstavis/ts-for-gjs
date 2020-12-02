@@ -752,6 +752,10 @@ export class GirModule {
         return ret
     }
 
+    private isGInterface(girClass: GirClass): boolean {
+        return girClass.prerequisite !== undefined
+    }
+
     private checkName(desc: string[], name: string | null, localNames: LocalNames): [string[], boolean] {
         if (!desc || desc.length === 0) return [[], false]
 
@@ -1040,7 +1044,7 @@ export class GirModule {
 
     private generateSignalMethods(cls: GirClass, propertyNames: string[], callbackObjectName: string): string[] {
         const def: string[] = []
-        const isDerivedFromGObject = this.isDerivedFromGObject(cls)
+        const isDerivedFromGObject = this.isDerivedFromGObject(cls) || this.isGInterface(cls)
         if (isDerivedFromGObject) {
             let prefix = 'GObject.'
             if (this.name === 'GObject') prefix = ''
