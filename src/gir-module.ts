@@ -805,15 +805,18 @@ export class GirModule {
         return def
     }
 
-    private processNamedMethods(cls: GirClass, localNames: LocalNames): ScopedFunctionDescription[] {
+    private processNamedMethods(
+        cls: GirClass,
+        localNames: LocalNames,
+        methodType: string,
+        prefix = '',
+    ): ScopedFunctionDescription[] {
         const def: ScopedFunctionDescription[] = []
-        if (cls.method) {
-            for (const func of cls.method) {
-                const [desc, name] = this.getFunction(func, '    ')
-                const checked = this.checkName(desc, name, localNames)
-                if (checked)
-                    def.push([checked[0], name, cls._fullSymName || null])
-            }
+        for (const func of cls[methodType] || []) {
+            const [desc, name] = this.getFunction(func, '    ', prefix)
+            const checked = this.checkName(desc, name, localNames)
+            if (checked)
+                def.push([checked[0], name, cls._fullSymName || null])
         }
         return def
     }
@@ -1010,8 +1013,20 @@ export class GirModule {
      * @param f1
      * @param f2
      */
-    private functionSignaturesMatch(f1: string, f2: string) {
-        return this.stripParamNames(f1) == this.stripParamNames(f2)
+    private functionSignaturesMatch(f1: string | string[], f2: string | string[]) {
+        if (!Array.isArray(f1)) {
+            f1 = [f1]
+        }
+        if (!Array.isArray(f2)) {
+            f2 = [f2]
+        }
+        if (f1.length != f2.length)
+            return false
+        for (let i = 0; i < f1.length; ++i) {
+            if (this.stripParamNames(f1[i]) != this.stripParamNames(f2[i]))
+                return false
+        }
+        return true
     }
 
     private processStaticFunctions(cls: GirClass, getter: (e: GirClass) => FunctionDescription[]): string[] {
@@ -1199,7 +1214,11 @@ export class GirModule {
         return []
     }
 
-    public processMethodsWithOverloads(girClass: GirClass, localNames: LocalNames): string[] {
+    public processMethodsWithOverloads(
+        girClass: GirClass,
+        localNames: LocalNames,
+        getter: (cls: GirClass, localNames: LocalNames) => ScopedFunctionDescription[]
+    ): string[] {
         const defs: string[] = []
 
         // Collect inherited property names because we can't have methods with the same name
@@ -1213,13 +1232,13 @@ export class GirModule {
         })
 
         // Methods of girClass
-        const methods = this.processNamedMethods(girClass, localNames)
+        const methods = getter(girClass, localNames)
 
         // Collate all potentially clashing inherited methods
         const fnMap: Map<string /* fn name */, Map<string /* class/iface */, string[] /* defn */>> = new Map()
         this.traverseInheritanceTree(girClass, (cls) => {
             this.forEachInterfaceAndSelf(cls, (e) => {
-                const meths = this.processNamedMethods(e, {})
+                const meths = getter(e, {})
                 for (const m of meths) {
                     if (!m[1] || !m[2]) continue
                     let subMap = fnMap.get(m[1])
@@ -1242,10 +1261,33 @@ export class GirModule {
             const clashes = fnMap.get(meth[1])
             if (!clashes) continue
             for (const [cls, defns] of clashes) {
-                if (meth[0].length != 1 || defns.length != 1 || !this.functionSignaturesMatch(meth[0][0], defns[0])) {
+                if (!this.functionSignaturesMatch(meth[0], defns)) {
                     defs.push(`    // False overload, use ${cls}.prototype.${meth[1]}.call()`)
                     defs.push(...defns)
                 }
+            }
+            // Remove this name from fnMap ready for the next step
+            fnMap.delete(meth[1])
+        }
+
+        // Some interfaces have method names that clash with each other, we may have inherited two
+        for (const [fName, defns] of fnMap) {
+            if (defns.size < 2) continue
+            // Here key is name-stripped defn, val is full defn and class name
+            const subDefs: Map<string, [string, string]> = new Map()
+            for (const [clsName, defs] of defns) {
+                for (const d of defs) {
+                    subDefs.set(this.stripParamNames(d), [d, clsName])
+                }
+            }
+            if (subDefs.size < 2) continue
+            for (const [d, [defn, clsName]] of subDefs) {
+                if (d.indexOf('vfunc_') >= 0) {
+                    defs.push(`    // Clashing method inherited from ${clsName}, do not override`)
+                } else {
+                    defs.push(`    // False overload, use ${clsName}.prototype.${fName}.call()`)
+                }
+                defs.push(defn)
             }
         }
 
@@ -1316,13 +1358,15 @@ export class GirModule {
 
         if (asInterface) {
             // Instance methods
-            def.push(...this.processMethodsWithOverloads(girClass, localNames))
-
+            def.push(...this.processMethodsWithOverloads(girClass, localNames, (cls, locs) => {
+                return this.processNamedMethods(cls, locs, 'method')
+            }))
             // Properties
             def.push(...this.processProperties(girClass, localNames, propertyNames))
-
             // Virtual methods
-            def.push(...this.processVirtualMethods(girClass))
+            def.push(...this.processMethodsWithOverloads(girClass, {}, (cls, locs) => {
+                return this.processNamedMethods(cls, locs, 'virtual-method', 'vfunc_')
+            }))
             // Signals
             def.push(...this.processSignals(girClass, name))
 
