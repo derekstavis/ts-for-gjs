@@ -1203,11 +1203,11 @@ export class GirModule {
         const defs: string[] = []
 
         // Collect inherited property names because we can't have methods with the same name
-        const propertyNames: string[] = []
+        const propertyNames: LocalNames = {}
         this.traverseInheritanceTree(girClass, (cls) => {
             this.forEachInterfaceAndSelf(cls, (e) => {
                 if (e != girClass) {
-                    this.processProperties(girClass, localNames, propertyNames)
+                    this.processProperties(girClass, propertyNames, [])
                 }
             })
         })
@@ -1235,15 +1235,15 @@ export class GirModule {
         // Define each method and overload it if necessary to avoid clashes
         for (const meth of methods) {
             if (!meth[1]) continue
-            if (Object.prototype.hasOwnProperty.call(localNames, meth[1])) {
-                defs.push(`   // Skipping ${meth[1]} because it clashes with an inherited property`)
+            if (Object.prototype.hasOwnProperty.call(propertyNames, meth[1])) {
+                defs.push(`    // Skipping ${meth[1]} because it clashes with an inherited property`)
                 continue
             }
             const clashes = fnMap.get(meth[1])
             if (!clashes) continue
             for (const [cls, defns] of clashes) {
                 if (meth[0].length != 1 || defns.length != 1 || !this.functionSignaturesMatch(meth[0][0], defns[0])) {
-                    defs.push(`   // False overload, use ${cls}.prototype.${meth[1]}.call()`)
+                    defs.push(`    // False overload, use ${cls}.prototype.${meth[1]}.call()`)
                     defs.push(...defns)
                 }
             }
@@ -1328,7 +1328,7 @@ export class GirModule {
 
             // Also add generic signal methods to satisfy TS overloading
             if (girClass._fullSymName != 'GObject.Object') {
-                def.push('   connect(sigName: string, callback: any): number',
+                def.push('    connect(sigName: string, callback: any): number',
                     '    connect_after(sigName: string, callback: any): number',
                     '    emit(sigName: string, ...args: any[]): void')
             }
