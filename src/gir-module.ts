@@ -1274,7 +1274,7 @@ export class GirModule {
         for (const meth of methods) {
             if (!meth[1]) continue
             if (Object.prototype.hasOwnProperty.call(propertyNames, meth[1])) {
-                defs.push(`    // Skipping ${meth[1]} because it clashes with an inherited property`)
+                defs.push(`    /* Skipping ${meth[1]} because it clashes with an inherited property */`)
                 continue
             }
             defs.push(...meth[0])
@@ -1282,7 +1282,7 @@ export class GirModule {
             if (!clashes) continue
             for (const [cls, defns] of clashes) {
                 if (!this.functionSignaturesMatch(meth[0], defns)) {
-                    defs.push(`    // False overload, use ${cls}.prototype.${meth[1]}.call()`)
+                    defs.push(`    /* False overload, use ${cls}.prototype.${meth[1]}.call() */`)
                     defs.push(...defns)
                 }
             }
@@ -1308,16 +1308,16 @@ export class GirModule {
 
             for (const [d, [defn, clsName]] of subDefs) {
                 if (d.indexOf('vfunc_') >= 0) {
-                    defs.push(`    // Clashing method inherited from ${clsName}, do not override`)
+                    defs.push(`    /* Clashing method inherited from ${clsName}, do not override */`)
                 } else {
-                    defs.push(`    // False overload, use ${clsName}.prototype.${fName}.call()`)
+                    defs.push(`    /* False overload, use ${clsName}.prototype.${fName}.call() */`)
                 }
                 defs.push(defn)
             }
         }
 
         if (defs.length)
-            defs.unshift('    // Instance methods')
+            defs.unshift('    /* Instance methods */')
         return defs
     }
 
