@@ -1279,6 +1279,7 @@ export class GirModule {
                 continue
             }
             defs.push(...meth[0])
+            localNames[meth[1]] = true
             const clashes = fnMap.get(meth[1])
             if (!clashes) continue
             for (const [cls, defns] of clashes) {
@@ -1293,6 +1294,9 @@ export class GirModule {
 
         // Some interfaces have method names that clash with each other, we may have inherited two
         for (const [fName, defns] of fnMap) {
+            // Have to add all inherited names to localNames to prevent clashes with properties,
+            // regardless of whether they're overloaded here
+            localNames[fName] = true
             if (defns.size < 2) {
                 continue
             }
@@ -1395,14 +1399,6 @@ export class GirModule {
             }, true))
             // Signals
             def.push(...this.processSignals(girClass, name))
-
-            // Also add generic signal methods to satisfy TS overloading
-            if (girClass._fullSymName != 'GObject.Object') {
-                def.push('    /* Generic signal methods */',
-                    '    connect(sigName: string, callback: any): number',
-                    '    connect_after(sigName: string, callback: any): number',
-                    '    emit(sigName: string, ...args: any[]): void')
-            }
         } else {
             // Copy properties from inheritance tree
             this.traverseInheritanceTree(girClass, (cls) =>
@@ -1435,7 +1431,7 @@ export class GirModule {
         // calls super() because this is just a mocked up representation of it
         // which doesn't affect the underlying code.
         if (asInterface) {
-            def.push('}', '', `export const ${name}: {`)
+            def.push('}', `export const ${name}: {`)
         }
 
         // Static side, including default constructor
