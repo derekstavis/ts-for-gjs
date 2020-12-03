@@ -569,6 +569,7 @@ export class GirModule {
         funcNamePrefix = '',
         overrideReturnType?: string,
         arrowType = false,
+        colon = false,
     ): FunctionDescription {
         if (!e || !e.$ || !this.girBool(e.$.introspectable, true) || e.$['shadowed-by']) return [[], null]
 
@@ -607,11 +608,16 @@ export class GirModule {
         }
         let retSep: string
         if (arrowType) {
-            prefix = ''
-            name = ''
             retSep = ' =>'
+            if (!colon) {
+                prefix = ''
+                name = ''
+            }
         } else {
             retSep = ':'
+        }
+        if (colon) {
+            name += ': '
         }
 
         return [[`${prefix}${name}(${params})${retSep} ${retType}`], name]
@@ -623,8 +629,8 @@ export class GirModule {
         prefix: string,
         funcNamePrefix = '',
     ): FunctionDescription {
-        // eslint-disable-next-line prefer-const
-        let [desc, funcName] = this.getFunction(e, prefix, funcNamePrefix, name)
+        const namedNew = e.$?.name === 'new'
+        const [desc, funcName] = this.getFunction(e, prefix, funcNamePrefix, name, namedNew, namedNew)
 
         if (!funcName) return [[], null]
 
@@ -1098,10 +1104,10 @@ export class GirModule {
         // JS constructor(s)
         if (isDerivedFromGObject) {
             if (asInterface) {
-                def.push(`    new (config?: ${name}_ConstructProps): ${name}`)
+                def.push(`    new(config?: ${name}_ConstructProps): ${name}`)
             } else {
-                def.push(`    constructor (config?: ${name}_ConstructProps)`)
-                def.push(`    _init (config?: ${name}_ConstructProps): void`)
+                def.push(`    constructor(config?: ${name}_ConstructProps)`)
+                def.push(`    _init(config?: ${name}_ConstructProps): void`)
             }
         } else {
             const constructor_: GirFunction[] = (girClass['constructor'] || []) as GirFunction[]
@@ -1110,9 +1116,6 @@ export class GirModule {
                     for (const f of constructor_) {
                         const [desc, funcName] = this.getConstructorFunction(name, f, `    ${stat}`)
                         if (!funcName) continue
-                        if (asInterface && funcName == 'new') {
-                            desc[0] = desc[0].replace('new', 'new:').replace(/:[^:]+$/, ` => ${name}`)
-                        }
                         def.push(...desc)
                     }
                 }
