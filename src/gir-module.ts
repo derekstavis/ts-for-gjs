@@ -1109,17 +1109,6 @@ export class GirModule {
                 def.push(`    constructor(config?: ${name}_ConstructProps)`)
                 def.push(`    _init(config?: ${name}_ConstructProps): void`)
             }
-        } else {
-            const constructor_: GirFunction[] = (girClass['constructor'] || []) as GirFunction[]
-            if (constructor_) {
-                if (Array.isArray(constructor_)) {
-                    for (const f of constructor_) {
-                        const [desc, funcName] = this.getConstructorFunction(name, f, `    ${stat}`)
-                        if (!funcName) continue
-                        def.push(...desc)
-                    }
-                }
-            }
         }
 
         def.push(...this.getAllStaticFunctions(girClass, name, stat))
